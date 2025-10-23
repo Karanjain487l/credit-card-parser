@@ -1,7 +1,3 @@
-Here is a complete, final `README.md` file for your GitHub project.
-
------
-
 # 💳 Credit Card Statement Parser
 
 An intelligent full-stack application that parses PDF credit card statements, extracts key summary data, and lists all transactions using the Google Gemini API.
