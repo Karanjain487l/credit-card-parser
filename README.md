@@ -4,6 +4,16 @@ An intelligent full-stack application that parses PDF credit card statements, ex
 
 It features a fast, client-side password check, a React-based interactive dashboard, and a secure Node.js backend. This tool allows you to quickly digitize and analyze your financial statements.
 
+<img width="1919" height="959" alt="image" src="https://github.com/user-attachments/assets/a6296f02-374e-4c36-b9a4-443030b298e8" />
+<img width="1907" height="936" alt="image" src="https://github.com/user-attachments/assets/622d494c-f835-4de0-b1cb-b3d33632a51e" />
+<img width="1256" height="959" alt="image" src="https://github.com/user-attachments/assets/7e666406-54d0-4f2b-92b7-b5c7ab43b00e" />
+<img width="1235" height="956" alt="image" src="https://github.com/user-attachments/assets/9376dc69-19b0-4aff-8ca3-7be252d54c55" />
+<img width="1232" height="956" alt="image" src="https://github.com/user-attachments/assets/cf81c3d7-9163-4afe-a287-c977974b076e" />
+
+
+
+
+
 -----
 ## ✨ Features
 
