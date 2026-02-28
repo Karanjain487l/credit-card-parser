@@ -14,8 +14,9 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+// Change the model name to a stable version like "gemini-1.5-flash"
 const model = genAI.getGenerativeModel({ 
-    model: "gemini-2.5-flash-preview-09-2025" 
+    model: "gemini-1.5-flash" 
 });
 
 const generationConfig = {
