@@ -1,7 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
-const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require('@google/generative-ai');
+const pdf = require('pdf-parse'); // Standard CJS import
+const { 
+    GoogleGenerativeAI, 
+    HarmCategory, 
+    HarmBlockThreshold,
+    SchemaType // Imported SchemaType for rock-solid schemas
+} = require('@google/generative-ai');
 require('dotenv').config();
 
 const app = express();
@@ -14,7 +20,6 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-// Change the model name to a stable version like "gemini-1.5-flash"
 const model = genAI.getGenerativeModel({ 
     model: "gemini-1.5-flash" 
 });
@@ -34,27 +39,27 @@ const safetySettings = [
 ];
 
 const extractionSchema = {
-    type: "OBJECT",
+    type: SchemaType.OBJECT,
     properties: {
-        totalBalance: { type: "STRING" },
-        dueDate: { type: "STRING" },
-        statementDate: { type: "STRING" },
-        last4Digits: { type: "STRING" },
-        minPayment: { type: "STRING" },
-        purchasesDebit: { type: "STRING" },
-        paymentsCredits: { type: "STRING" },
-        totalCreditLimit: { type: "STRING" },
-        availableCreditLimit: { type: "STRING" },
-        availableCashLimit: { type: "STRING" },
-        previousStatementDues: { type: "STRING" },
+        totalBalance: { type: SchemaType.STRING },
+        dueDate: { type: SchemaType.STRING },
+        statementDate: { type: SchemaType.STRING },
+        last4Digits: { type: SchemaType.STRING },
+        minPayment: { type: SchemaType.STRING },
+        purchasesDebit: { type: SchemaType.STRING },
+        paymentsCredits: { type: SchemaType.STRING },
+        totalCreditLimit: { type: SchemaType.STRING },
+        availableCreditLimit: { type: SchemaType.STRING },
+        availableCashLimit: { type: SchemaType.STRING },
+        previousStatementDues: { type: SchemaType.STRING },
         transactions: {
-            type: "ARRAY",
+            type: SchemaType.ARRAY,
             items: {
-                type: "OBJECT",
+                type: SchemaType.OBJECT,
                 properties: {
-                    date: { type: "STRING" },
-                    description: { "type": "STRING" },
-                    amount: { "type": "STRING" }
+                    date: { type: SchemaType.STRING },
+                    description: { type: SchemaType.STRING },
+                    amount: { type: SchemaType.STRING }
                 }
             }
         }
@@ -62,11 +67,11 @@ const extractionSchema = {
 };
 
 const categorizationSchema = {
-    type: "OBJECT",
+    type: SchemaType.OBJECT,
     properties: {
         categories: {
-            type: "ARRAY",
-            items: { type: "STRING" }
+            type: SchemaType.ARRAY,
+            items: { type: SchemaType.STRING }
         }
     }
 };
@@ -75,13 +80,13 @@ async function extractDataFromText(text) {
     const prompt = `From the credit card statement text provided, you MUST extract both the summary details AND a complete list of all individual transactions. It is critical that the 'transactions' array is populated. If no transactions are found, return an empty array for the transactions field. For all other fields, return "Not Found" if the data is missing. Format all currency values with the Indian Rupee symbol (₹). Text: --- ${text.substring(0, 30000)} ---`;
 
     const result = await model.generateContent({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: { ...generationConfig, responseMimeType: "application/json", responseSchema: extractionSchema },
         safetySettings,
     });
     
-    const response = result.response;
-    return JSON.parse(response.candidates[0].content.parts[0].text);
+    // Using the built-in .text() method is much safer
+    return JSON.parse(result.response.text());
 }
 
 async function categorizeTransactions(transactions) {
@@ -91,13 +96,12 @@ async function categorizeTransactions(transactions) {
     const prompt = `Categorize each of these transaction descriptions into one of these categories: Shopping, Food & Dining, Travel, Utilities, Entertainment, Health & Wellness, Groceries, Other. Return a JSON object with a 'categories' array containing the category for each description in the same order. Descriptions: ${JSON.stringify(descriptions)}`;
     
     const result = await model.generateContent({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: { ...generationConfig, responseMimeType: "application/json", responseSchema: categorizationSchema },
         safetySettings,
     });
 
-    const response = result.response;
-    return JSON.parse(response.candidates[0].content.parts[0].text).categories;
+    return JSON.parse(result.response.text()).categories;
 }
 
 app.post('/api/parse-statement', upload.single('pdf'), async (req, res) => {
@@ -107,14 +111,12 @@ app.post('/api/parse-statement', upload.single('pdf'), async (req, res) => {
 
     try {
         const password = req.body.password;
-                
         const dataBuffer = req.file.buffer;
-        const { PDFParse } = await import('pdf-parse');
-        const parser = new PDFParse({ data: dataBuffer, password: password });
-        const textResult = await parser.getText();
-        const text = textResult.text;
-        console.log(text)
-
+        
+        // Correct pdf-parse implementation
+        const options = password ? { password: password } : {};
+        const pdfResult = await pdf(dataBuffer, options);
+        const text = pdfResult.text;
 
         const extractedData = await extractDataFromText(text);        
 
@@ -129,6 +131,7 @@ app.post('/api/parse-statement', upload.single('pdf'), async (req, res) => {
         });
 
     } catch (error) {
+        // pdf.js throws a PasswordException if it hits an encrypted file without the right password
         if (error.name === 'PasswordException' || (error.message && error.message.includes('Password'))) {            
             return res.status(400).json({ error: 'password_required' });
         }
